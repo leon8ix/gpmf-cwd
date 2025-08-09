@@ -54,6 +54,18 @@ Notes:
 - With no arguments, it processes the current directory. You can also pass a directory explicitly: `gpmf-cwd D:\videos`.
 - JSON is written next to each `.MP4` file.
 
+## Prerequisites for large files
+
+For multi‑GB MP4s, install ffmpeg/ffprobe so the tool can extract only the GoPro MET (GPMD) stream and avoid loading the whole video into memory.
+
+- Windows (winget):
+
+```powershell
+winget install "FFmpeg (Essentials Build)"
+```
+
+If ffmpeg/ffprobe are missing and a file is very large (≈2 GB+), the tool skips processing and suggests installing ffmpeg.
+
 ## CI builds
 
 On push to `main`, GitHub Actions builds a Windows binary and publishes a GitHub Release using the version from `package.json`. The raw `.exe` is attached to the release (no zip).
@@ -64,6 +76,10 @@ On push to `main`, GitHub Actions builds a Windows binary and publishes a GitHub
 - Fix running large files (RAM)
 
 ## Versions
+
+### 0.4.0 (250810)
+
+- Large-file handling: prefer ffmpeg/ffprobe to extract only the GPMD track; skip very large files if ffmpeg is unavailable; README adds ffmpeg install.
 
 ### 0.3.0 (250809)
 
