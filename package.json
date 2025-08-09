@@ -1,6 +1,6 @@
 {
 	"name": "@leon8ix/gpmf-cwd",
-	"version": "0.2.0",
+	"version": "0.3.0",
 	"author": "leon8ix",
 	"description": "This is a simple setup for extracting the GPMF data from all GoPro footage in a directory for usage in After Effects as JSON. The hard parts are handled by the 'gpmf-extract' and 'gopro-telemetry' packages. This is just a setup for easy usage.",
 	"license": "UNLICENSED",

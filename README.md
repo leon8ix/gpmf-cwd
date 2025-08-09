@@ -65,6 +65,10 @@ On push to `main`, GitHub Actions builds a Windows binary and publishes a GitHub
 
 ## Versions
 
+### 0.3.0 (250809)
+
+- Skip JSON creation when no GPS streams are found (avoids near-empty files)
+
 ### 0.2.0 (250809)
 
 - Windows exe build script via Bun (`bun run build:win`)

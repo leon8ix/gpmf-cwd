@@ -38,8 +38,7 @@ async function main() {
 				.filter((s: string) => s.toUpperCase().startsWith('GPS'));
 
 			if (!gpsKeys.length) {
-				console.warn(`  ⚠ No GPS streams found for ${filePath}`);
-				await Bun.write(jsonName, JSON.stringify(streamsInfo, null, 2));
+				console.warn(`  ⚠ No GPS streams found for ${filePath} — skipping JSON output`);
 				continue;
 			}
 
