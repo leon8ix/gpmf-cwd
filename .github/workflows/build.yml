@@ -1,0 +1,67 @@
+name: Build and Release (Windows)
+
+on:
+    push:
+        branches: [main]
+    workflow_dispatch:
+
+permissions:
+    contents: write
+
+jobs:
+    build-windows:
+        runs-on: windows-latest
+        steps:
+            - name: Checkout
+              uses: actions/checkout@v4
+
+            - name: Get version from package.json
+              id: get_version
+              shell: pwsh
+              run: |
+                  $v = (Get-Content package.json | ConvertFrom-Json).version
+                  echo "version=$v" | Out-File -FilePath $env:GITHUB_OUTPUT -Append -Encoding utf8
+
+            - name: Install Bun
+              uses: oven-sh/setup-bun@v2
+              with:
+                  bun-version: latest
+
+            - name: Install dependencies
+              run: bun install --frozen-lockfile
+
+            - name: Build (Windows)
+              run: bun run build:win
+
+            - name: Compute asset name
+              id: asset_name
+              shell: pwsh
+              run: |
+                  $name = "gpmf-cwd-v${{ steps.get_version.outputs.version }}.exe"
+                  echo "name=$name" | Out-File -FilePath $env:GITHUB_OUTPUT -Append -Encoding utf8
+
+            - name: Copy/rename for release
+              shell: pwsh
+              run: |
+                  Copy-Item -Path dist/gpmf-cwd.exe -Destination ${{ steps.asset_name.outputs.name }} -Force
+
+            - name: Create GitHub Release
+              id: create_release
+              uses: actions/create-release@v1
+              env:
+                  GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+              with:
+                  tag_name: v${{ steps.get_version.outputs.version }}
+                  release_name: Release ${{ steps.get_version.outputs.version }}
+                  draft: false
+                  prerelease: false
+
+            - name: Upload EXE to Release
+              uses: actions/upload-release-asset@v1
+              env:
+                  GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+              with:
+                  upload_url: ${{ steps.create_release.outputs.upload_url }}
+                  asset_path: ${{ steps.asset_name.outputs.name }}
+                  asset_name: ${{ steps.asset_name.outputs.name }}
+                  asset_content_type: application/vnd.microsoft.portable-executable
