@@ -70,6 +70,33 @@ async function extractGpmdOnlyMp4(inputPath: string): Promise<string | null> {
 	return code === 0 ? tmpOut : null;
 }
 
+async function getVideoFps(inputPath: string): Promise<number | null> {
+	// Try avg_frame_rate first; fallback to r_frame_rate
+	const probe = await runCommand('ffprobe', [
+		'-v',
+		'error',
+		'-select_streams',
+		'v:0',
+		'-show_entries',
+		'stream=avg_frame_rate,r_frame_rate',
+		'-of',
+		'json',
+		inputPath,
+	]);
+	if (probe.code !== 0) return null;
+	try {
+		const info = JSON.parse(probe.stdout);
+		const s = (info?.streams || [])[0];
+		const rate = s?.avg_frame_rate && s.avg_frame_rate !== '0/0' ? s.avg_frame_rate : s?.r_frame_rate;
+		if (!rate || typeof rate !== 'string') return null;
+		const [num, den] = rate.split('/').map((v: string) => parseFloat(v));
+		if (!num || !den) return null;
+		return num / den;
+	} catch {
+		return null;
+	}
+}
+
 async function main() {
 	// Start timing the entire batch
 	const timeStart = performance.now();
@@ -100,6 +127,14 @@ async function main() {
 				const arrayBuffer = await Bun.file(gpmdOnly).arrayBuffer();
 				const nodeBuffer = Buffer.from(arrayBuffer);
 				extracted = await gpmfExtract(nodeBuffer);
+				// Ensure frameDuration is present for MGJSON by probing the original file's video FPS
+				if (!extracted?.timing?.frameDuration) {
+					const fps = await getVideoFps(filePath);
+					if (fps && isFinite(fps) && fps > 0) {
+						extracted.timing = extracted.timing || {};
+						extracted.timing.frameDuration = 1 / fps;
+					}
+				}
 			} else {
 				// No GPMD-only path found. For very large files (>~4 GB), skip proactively to avoid Buffer limits
 				if (isVeryLarge) {
@@ -133,16 +168,48 @@ async function main() {
 				.filter((s: string) => s.toUpperCase().startsWith('GPS'));
 
 			if (!gpsKeys.length) {
-				console.warn(`  ⚠ No GPS streams found for ${filePath} — skipping JSON output`);
-				continue;
+				console.warn(
+					`  ⚠ No GPS streams found for ${filePath} — attempting MGJSON without explicit GPS filter`,
+				);
 			}
 
-			// Extract full telemetry for detected GPS streams
-			const telemetry = await goproTelemetry(extracted, { stream: gpsKeys as any, promisify: true });
+			// Export MGJSON preset for Adobe After Effects (only)
+			let mgjsonOutput: any = null;
+			// Prefer leaving streams undefined for mgjson so preset defaults can pick GPS automatically
+			try {
+				mgjsonOutput = await goproTelemetry(extracted, {
+					preset: 'mgjson',
+					name: path.basename(filePath),
+					promisify: true,
+				} as any);
+			} catch (e1) {
+				// Retry specifying GPS streams explicitly if we detected any
+				if (gpsKeys.length) {
+					try {
+						mgjsonOutput = await goproTelemetry(extracted, {
+							preset: 'mgjson',
+							stream: gpsKeys as any,
+							name: path.basename(filePath),
+							promisify: true,
+						} as any);
+					} catch (e2) {
+						console.warn(`  ⚠ Failed to generate MGJSON for ${filePath}`);
+						mgjsonOutput = null;
+					}
+				} else {
+					console.warn(`  ⚠ Failed to generate MGJSON for ${filePath}`);
+					mgjsonOutput = null;
+				}
+			}
 
-			// Write JSON next to the MP4
-			await Bun.write(jsonName, JSON.stringify(telemetry, null, 2));
-			console.log(`  ✅ Wrote ${jsonName}`);
+			// Write MGJSON next to the MP4
+			if (!mgjsonOutput) {
+				// Nothing more to do for this file
+				continue;
+			}
+			const mgjsonName = `${baseName}.mgjson`;
+			await Bun.write(mgjsonName, typeof mgjsonOutput === 'string' ? mgjsonOutput : JSON.stringify(mgjsonOutput));
+			console.log(`  ✅ Wrote ${mgjsonName}`);
 
 			// Cleanup any temporary files
 			if (tmpForCleanup) {

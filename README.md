@@ -1,12 +1,12 @@
 # GPMF CWD
 
-This is a simple setup for extracting the GPMF data from all GoPro footage in a directory for usage in After Effects as JSON. The hard parts are handled by the 'gpmf-extract' and 'gopro-telemetry' packages. This is just a setup for easy usage.
+This is a simple tool for extracting GPMF telemetry from GoPro MP4s and writing MGJSON files for Adobe After Effects. It relies on `gpmf-extract` and `gopro-telemetry` under the hood.
 
 ## Usage
 
 ### With Bun (development)
 
-Run against a directory containing MP4 files (writes a JSON next to each file):
+Run against a directory containing MP4 files (writes an `.mgjson` next to each):
 
 ```sh
 bun index.ts ./data
@@ -30,8 +30,12 @@ Run it the same way:
 
 Notes:
 
-- Input arg is a directory. The tool finds `*.MP4`/`*.mp4` and writes `*.json` next to each.
-- JSON contains telemetry grouped by device and streams (e.g., `GPS9.samples`).
+- If you omit the path argument, it processes the current directory.
+- The tool finds `*.MP4`/`*.mp4` and writes `*.mgjson` next to each.
+
+### Export for Adobe After Effects (MGJSON)
+
+For each processed MP4 the tool writes an `.mgjson`. Import it in After Effects as footage to get data streams you can link properties/effects to.
 
 ### Install on Windows (add to PATH)
 
@@ -52,7 +56,7 @@ gpmf-cwd
 Notes:
 
 - With no arguments, it processes the current directory. You can also pass a directory explicitly: `gpmf-cwd D:\videos`.
-- JSON is written next to each `.MP4` file.
+- An `.mgjson` is written next to each `.MP4` file.
 
 ## Prerequisites for large files
 
@@ -64,7 +68,10 @@ For multi‑GB MP4s, install ffmpeg/ffprobe so the tool can extract only the GoP
 winget install "FFmpeg (Essentials Build)"
 ```
 
-If ffmpeg/ffprobe are missing and a file is very large (≈2 GB+), the tool skips processing and suggests installing ffmpeg.
+Behavior with large files:
+
+- If ffmpeg/ffprobe are available: the tool extracts only the telemetry track first (memory‑safe) and proceeds.
+- If ffmpeg/ffprobe are not available: files ≳4 GB are skipped with an install suggestion; smaller files are attempted in‑memory and, if an out‑of‑memory occurs, a friendly suggestion is shown.
 
 ## CI builds
 
@@ -73,9 +80,12 @@ On push to `main`, GitHub Actions builds a Windows binary and publishes a GitHub
 ## ToDo
 
 - Add macOS/Linux build matrix and release publishing
-- Fix running large files (RAM)
 
 ## Versions
+
+### 0.5.0 (250810)
+
+- Output actual MGJSON for After Effects instead of general JSON
 
 ### 0.4.0 (250810)
 
