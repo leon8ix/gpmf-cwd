@@ -2,6 +2,8 @@
 
 This is a simple tool for extracting GPMF telemetry from GoPro MP4s and writing MGJSON files for Adobe After Effects. It relies on `gpmf-extract` and `gopro-telemetry` under the hood.
 
+Bun is used to build this setup to a binary. The goal is being able to run `gpmf-cwd` from any folder to convert all its contents (mp4 files) to mgjson.
+
 ## Usage
 
 ### With Bun (development)
@@ -76,6 +78,11 @@ Behavior with large files:
 ## CI builds
 
 On push to `main`, GitHub Actions builds a Windows binary and publishes a GitHub Release using the version from `package.json`. The raw `.exe` is attached to the release (no zip).
+
+## License
+
+- This project is licensed under the MIT License. See `LICENSE` for details.
+- It uses `gpmf-extract` (MIT) and `gopro-telemetry` (ISC). Please retain their notices when redistributing.
 
 ## ToDo
 
